@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<head>
+<html>
+<style type="text/css">
+body{
+   background-color:#fff;
+   }   
+#myCanvas{
+      display: block;
+      margin: 0 auto;
+      margin-top:10px;
+      background-color:#003300;
+      border-radius: 10px;
+      border-bottom:35px solid #C2AA83;
+      box-shadow: 3px 3px 0px #888888;
+      padding-top:25px;
+   }
+.balloon {
+      position: relative;
+      display: inline-block;
+      margin: 1.5em 0 1.5em 15px;
+      padding: 7px 10px;
+      min-width: 120px;
+      max-width: 100%;
+      color: #555;
+      font-size: 16px;
+      background: #e0edff;
+      border-radius: 15px;
+      font-family: sans-serif;
+   }  
+.balloon:before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -25px;
+      margin-top: -15px;
+      border: 15px solid transparent;
+      border-right: 15px solid #e0edff;
+   }
+.balloon p {
+      margin: 0;
+      padding: 0;
+   }
+.image {
+  border-radius: 50%;
+}
+
+</style>
+<canvas id="myCanvas" width="700" height="800">   
+</canvas>
+
+<img id = "ima" class = "image" width = "100" height = "100"  src = "img1.png" alt = "image" onclick = "getImage();"></script>
+
+<script type="text/javascript">
+
+
+
+//天気予報 X ブロックゲーム 
+
+//-------------------------------------------------------------------------------------------------
+//APIのリンク:   https://openweathermap.org/current
+//-------------------------------------------------------------------------------------------------
+
+var canvas=document.getElementById('myCanvas');
+var ctx=canvas.getContext('2d');
+ 
+var x=canvas.width/2;
+var y=canvas.height-80;
+var paddleHeight=10;
+var paddleWidth=90;
+var paddleX=(canvas.width-paddleWidth)/2;
+var rightPressed=false;  
+var leftPressed=false;  
+var ballRadi=10;
+var boxRowCount=5;
+var boxColumnCount=5;
+var count=boxRowCount*boxColumnCount;
+var rem=count;
+var score = 0;
+var lives = 15; 
+var boxWidth=100;
+var boxHeight=100;
+var boxPadding=5;
+var boxOffsetTop=30;
+var boxOffsetLeft=100;
+
+
+ 
+var boxs=[];
+for(c=0;c<boxColumnCount;++c){
+  boxs[c]=[];
+  for(r=0;r<boxRowCount;++r){
+    boxs[c][r]={x:0,y:0,status:1};
+  }
+}
+ 
+var dx=4.5;
+var dy=-4.5;
+var imag = new Image();
+ 
+//写真の取り込みとシャッフル
+function getImage(){
+  var imarr = ["img1.png", "img2.png", "img3.png", "img4.png", "img5.png"];
+
+  var i = Math.floor(Math.random()*imarr.length);
+  document.getElementById("ima").src = imarr[i];
+  imag.src = document.getElementById("ima").src;
+  
+}
+
+//ボールを描く
+function drawBall(){
+  ctx.beginPath();
+  ctx.arc(x,y,ballRadi,0,Math.PI*2);
+  ctx.fillStyle="	#FF00FF";
+  ctx.fillStroke="#FF00FF";
+  ctx.stroke="10";
+  ctx.fill();
+  ctx.closePath();
+}
+//下のバーを描く
+function drawPaddle(){
+  ctx.beginPath();
+  ctx.rect(paddleX,canvas.height-paddleHeight,paddleWidth,paddleHeight);
+  ctx.fillStyle="#00ffff";
+  ctx.fill();
+  ctx.closePath();
+}
+//ボックスを描く
+function drawboxs(){
+  var i =0;
+  for(c=0;c<boxColumnCount;++c){
+    for(r=0;r<boxRowCount;++r){
+       if(boxs[c][r].status==1){
+ 
+         var boxX=(c*(boxWidth+boxPadding))+boxOffsetLeft;
+         var boxY=(r*(boxHeight+boxPadding))+boxOffsetTop;
+         boxs[c][r].x=boxX;
+         boxs[c][r].y=boxY;
+         ctx.beginPath();
+         ctx.rect(boxX,boxY,boxWidth,boxHeight);
+         ctx.fillStyle= 'hsl(' + ((i % 50) / 50) * 360 + ',70%, 60%)';  //色の変更
+         ctx.fill();
+         ctx.closePath();
+         i+=14;
+      }
+    }
+  }
+}
+
+//ボールの移動とブロックに当たったかの確認
+function collisionDetection(){
+ 
+  for(c=0;c<boxColumnCount;++c){
+    for(r=0;r<boxRowCount;++r){
+      var b=boxs[c][r];
+      if(b.status==1){
+        if(x>b.x && x<b.x+boxWidth && y>b.y && y<b.y+boxHeight){
+             dy=-dy;
+             b.status=0;
+             score++;
+             count--;
+            if(dy<0)     
+              dy-=0.05;
+            else
+              dy+=0.05;
+            if(dx<0)
+              dx-=0.05;
+            else
+              dx+=0.05;        
+            if(count<=0){
+                     weatherBalloon( 1850147 );  //ゲームクリアしたら天気を呼び出す。
+                     
+               }
+        }
+      }
+    }
+  }
+}
+//スコアの表示
+function drawScore(){
+   ctx.font="18px Arial";
+   ctx.fillStyle="#fff";
+   ctx.fillText("score: "+score,40,20);
+}
+//残りのLiveを表示
+function drawLives() {
+    ctx.font = "18px Arial";
+    ctx.fillStyle = "#fff";
+    ctx.fillText("lives: "+lives, canvas.width-310, 20);
+}
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(imag,110,50,500,500);
+    drawboxs();
+    drawPaddle();
+    drawBall();
+    drawScore();
+    drawLives();
+    collisionDetection();
+    
+    //跳ね返りの動作
+    if(y+dy<=ballRadi)  
+      dy=-dy; 
+    else if(y+dy>canvas.height-ballRadi){
+       if(x>=paddleX && x<=paddleX+paddleWidth){
+          dy=-dy;
+       }
+       else{
+          lives--;  //ボールが床についてしまったら Liveを減らす。残りが0になったらゲームオーバー。
+          if(!lives) {
+            alert("残念。。。またチャレンジしてください。");
+            document.location.reload();
+          }
+          else{
+            dy=-dy;
+            rem=count;
+           }
+      }
+    }
+    else
+      y+=dy;
+    if(x+dx<ballRadi || x+dx>canvas.width-ballRadi)
+       dx=-dx;
+    else
+       x+=dx;
+ 
+    if(rightPressed && paddleX<canvas.width-paddleWidth)
+       paddleX+=7;
+    else if(leftPressed && paddleX>0)
+       paddleX-=7;
+}
+//キーボードのキーで左右の移動
+function keyDown(e){
+  if(e.keyCode==39)
+    rightPressed=true;
+  else if(e.keyCode==37)
+    leftPressed=true;
+}
+function keyUp(e){
+   if(e.keyCode==39)
+    rightPressed=false;
+   if(e.keyCode==37)
+     leftPressed=false;
+}
+//マウスでの左右の移動
+function mouseMoveHandler(e){
+  var relativeX=e.clientX-canvas.offsetLeft;
+  if(relativeX>0 && relativeX<canvas.width){
+     if((relativeX-paddleWidth/2>=0) && (relativeX-paddleWidth/2<=(canvas.width-paddleWidth)))
+        paddleX=relativeX-paddleWidth/2;
+  }
+}
+document.addEventListener("keydown",keyDown,false);
+document.addEventListener("keyup",keyUp,false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
+ 
+
+
+//-------------------------------------------------------------------------------------------------------------
+
+//天気の取得
+function weatherBalloon(cityID){
+  var key = [//add your key here//];   
+  fetch('https://api.openweathermap.org/data/2.5/weather?id=' + cityID+ '&appid=' + key)   
+  .then(function(resp) { return resp.json() }) // Convert data to json
+  .then(function(data) {
+    drawWeather(data);
+  })
+  .catch(function() {
+  });
+}
+
+//天気の表示
+function drawWeather( d ) {
+	var celcius = Math.round(parseFloat(d.main.temp)-273.15);
+	var fahrenheit = Math.round(((parseFloat(d.main.temp)-273.15)*1.8)+32); 
+	var description = d.weather[0].description;
+
+  alert("おめでとうございます。\n今日の東京の天気は" + description + "です。\n気温は" + celcius+ '度です。');
+
+	if( description.indexOf('rain') > 0 ) {
+  	   document.body.className = 'rainy';
+   } else if( description.indexOf('cloud') > 0 ) {
+  	   document.body.className = 'cloudy';
+   } else if( description.indexOf('sunny') > 0 ) {
+  	   document.body.className = 'sunny';
+  }
+  document.location.reload();
+}
+
+setInterval(draw,15);
+
+</script>
+
+   <meta charset="utf-8"/>
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <title>Weather Game</title>
+</head>
+ 
+<body onload = "getImage()">
+   
+   <div class="balloon">
+         <p>Click me!!</p>
+       </div>
+</body>
+</html>
